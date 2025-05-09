@@ -6,10 +6,7 @@ import pandas as pd
 
 
 # --- Función para Conectar a la Base de Datos ---
-# Usa cache_resource para mantener la conexión abierta y reutilizarla entre interacciones
-# --- Función para Conectar a la Base de Datos ---
-# Usa cache_resource para mantener la conexión abierta y reutilizarla entre interacciones
-# --- Función para Conectar a la Base de Datos usando Túnel SSH (CORREGIDA) ---
+# --- Función para Conectar a la Base de Datos usando Túnel SSH (CORRECCIÓN FINAL) ---
 # Usa cache_resource para mantener la conexión abierta y reutilizarla entre interacciones
 @st.cache_resource
 def obtener_conexion_bd():
@@ -36,6 +33,7 @@ def obtener_conexion_bd():
 
         # Asegurarse de que el túnel no esté ya activo antes de intentar iniciarlo de nuevo
         # Revisa si el túnel existe Y si está activo. Si no existe o no está activo, crea uno nuevo.
+        # CORRECCIÓN DE TIPEO: st.session_session -> st.session_state
         if st.session_state.ssh_tunnel is None or not st.session_state.ssh_tunnel.is_active:
             # Crear el túnel SSH
             st.session_state.ssh_tunnel = sshtunnel.SSHTunnelForwarder(
@@ -70,6 +68,9 @@ def obtener_conexion_bd():
         st.error(f"Error al establecer el túnel SSH: {e}")
         st.info("Verifica tu IP pública, puerto SSH (22222), usuario de Windows, y que OpenSSH Server esté funcionando en tu PC y el port forwarding en tu router.")
         st.code(f"Detalles del error de túnel: {e}")
+        # Puedes añadir logs del túnel para depuración si es necesario (descomentar para ver más info)
+        # if st.session_state.get('ssh_tunnel') and st.session_state.ssh_tunnel.is_active:
+        #     st.code(st.session_state.ssh_tunnel.logs) # Acceder a logs del túnel
         return None
     except mysql.connector.Error as e:
         st.error(f"Error al conectar a la base de datos MySQL (después del túnel): {e}")
