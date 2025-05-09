@@ -5,8 +5,6 @@ import pandas as pd
 import subprocess
 import sys
 
-installed = subprocess.check_output([sys.executable, "-m", "pip", "freeze"])
-print("PAQUETES INSTALADOS EN ENTORNO:", installed.decode())
 
 # --- Función para Conectar a la Base de Datos ---
 # --- Función para Conectar a la Base de Datos (DIRECTO A CLOUD SQL) ---
