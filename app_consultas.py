@@ -1,4 +1,3 @@
-import sshtunnel
 import streamlit as st
 import mysql.connector
 import pandas as pd
@@ -6,75 +5,37 @@ import pandas as pd
 
 
 # --- Función para Conectar a la Base de Datos ---
-# --- Función para Conectar a la Base de Datos usando Túnel SSH (CORRECCIÓN FINAL) ---
+# --- Función para Conectar a la Base de Datos (DIRECTO A CLOUD SQL) ---
 # Usa cache_resource para mantener la conexión abierta y reutilizarla entre interacciones
 @st.cache_resource
 def obtener_conexion_bd():
-    # Guardar la instancia del túnel en el estado de sesión para poder detenerlo si es necesario
-    # Esto ayuda a que Streamlit no intente abrir un nuevo túnel en cada interacción
-    if 'ssh_tunnel' not in st.session_state:
-        st.session_state.ssh_tunnel = None
-
     try:
-        # Configuración de la base de datos remota (a través del túnel)
-        db_remote_host = "localhost" # Para el túnel, la base de datos local es accesible via localhost
-        db_remote_port = st.secrets["connections"]["mysql"]["port"] # Puerto de MySQL en tu PC
+        # Leer credenciales de st.secrets (Ahora son para Cloud SQL directo)
+        # Asegúrate de configurar los secretos en la interfaz de Streamlit Cloud así:
+        # [connections.mysql]
+        # host = "IP_PUBLICA_DE_CLOUD_SQL"  # <-- ¡Tu IP pública de Cloud SQL!
+        # database = "GPON"
+        # user = "root"                     # <-- O el usuario que creaste
+        # password = "tu_contrasena_cloud_sql"
+        # port = 3306                       # Puerto de MySQL en Cloud SQL
 
-        # Configuración del túnel SSH
-        ssh_host = st.secrets["ssh"]["host"]
-        ssh_port = st.secrets["ssh"]["port"]
-        ssh_user = st.secrets["ssh"]["user"]
-        ssh_private_key_content = st.secrets["ssh"]["private_key"]
-
-        # Verificar que la clave privada no esté vacía
-        if not ssh_private_key_content.strip():
-            st.error("Error: La clave privada SSH en st.secrets está vacía. Por favor, revisa tu configuración en Streamlit Cloud.")
-            return None
-
-        # Asegurarse de que el túnel no esté ya activo antes de intentar iniciarlo de nuevo
-        # Revisa si el túnel existe Y si está activo. Si no existe o no está activo, crea uno nuevo.
-        # CORRECCIÓN DE TIPEO: st.session_session -> st.session_state
-        if st.session_state.ssh_tunnel is None or not st.session_state.ssh_tunnel.is_active:
-            # Crear el túnel SSH
-            st.session_state.ssh_tunnel = sshtunnel.SSHTunnelForwarder(
-                (ssh_host, int(ssh_port)), # Host y puerto del servidor SSH (tu IP pública y puerto 22222)
-                ssh_username=ssh_user,
-                ssh_private_key=ssh_private_key_content, # Pasa el contenido de la clave privada directamente
-                remote_bind_address=(db_remote_host, int(db_remote_port)), # Host y puerto de la DB en tu máquina
-                # Opcional: log_level para depuración (descomentar para ver más info en logs)
-                # log_level=1 # sshtunnel.logging.DEBUG
-            )
-            st.session_state.ssh_tunnel.start() # Inicia el túnel SSH
-            st.success(f"Túnel SSH establecido en puerto local: {st.session_state.ssh_tunnel.local_bind_port}")
-        else:
-            st.info("Túnel SSH ya activo y reutilizado.")
-
-
-        # Conectar a la base de datos MySQL a través del túnel
         conexion = mysql.connector.connect(
-            host='127.0.0.1',  # Conectar al lado local del túnel SSH (siempre 127.0.0.1 desde el contenedor de Streamlit)
-            port=st.session_state.ssh_tunnel.local_bind_port, # Usar el puerto asignado localmente por el túnel
+            host=st.secrets["connections"]["mysql"]["host"],
             database=st.secrets["connections"]["mysql"]["database"],
             user=st.secrets["connections"]["mysql"]["user"],
-            password=st.secrets["connections"]["mysql"]["password"]
+            password=st.secrets["connections"]["mysql"]["password"],
+            port=st.secrets["connections"]["mysql"]["port"]
         )
-        st.success("Conexión a la base de datos exitosa a través del túnel SSH!")
+        st.success("Conexión a la base de datos Cloud SQL exitosa!") # Mensaje de éxito en Streamlit
         return conexion
     except KeyError as e:
-        st.error(f"Error de configuración de secretos: Asegúrate de que todas las claves SSH y de MySQL estén en st.secrets. Falta la clave: {e}")
-        st.info("Formato esperado: `[connections.mysql]` con host, database, user, password, port. Y `[ssh]` con host, port, user, private_key.")
-        return None
-    except sshtunnel.BaseSSHTunnelForwarderError as e:
-        st.error(f"Error al establecer el túnel SSH: {e}")
-        st.info("Verifica tu IP pública, puerto SSH (22222), usuario de Windows, y que OpenSSH Server esté funcionando en tu PC y el port forwarding en tu router.")
-        st.code(f"Detalles del error de túnel: {e}")
-        # Puedes añadir logs del túnel para depuración si es necesario (descomentar para ver más info)
-        # if st.session_state.get('ssh_tunnel') and st.session_state.ssh_tunnel.is_active:
-        #     st.code(st.session_state.ssh_tunnel.logs) # Acceder a logs del túnel
+        st.error(f"Error: Secreto de base de datos no encontrado en st.secrets. Falta la clave: {e}")
+        st.info("Por favor, configura los secretos de la base de datos en la interfaz de Streamlit Cloud.")
         return None
     except mysql.connector.Error as e:
-        st.error(f"Error al conectar a la base de datos MySQL (después del túnel): {e}")
-        st.code(f"Detalles del error de MySQL: {e}")
+        st.error(f"Error al conectar a la base de datos Cloud SQL: {e}")
+        st.code(f"Detalles del error: {e}") # Mostrar detalles técnicos del error de conexión
+        st.info("Verifica que la IP pública, el usuario, la contraseña y el puerto de tu instancia de Cloud SQL sean correctos y que tu instancia sea accesible (0.0.0.0/0 en Redes Autorizadas).")
         return None
     except Exception as e:
         st.error(f"Ocurrió un error inesperado al conectar a la base de datos: {e}")
@@ -83,25 +44,27 @@ def obtener_conexion_bd():
 
 # --- Función para Ejecutar Consultas SQL ---
 # No cacheamos los resultados aquí, la función llamante puede usar st.cache_data si es necesario
+# --- Función para Ejecutar Consultas SQL (Genérica) ---
+# No cacheamos los resultados aquí, la función llamante puede usar st.cache_data si es necesario
 def ejecutar_consulta(query, params=None):
     conexion = obtener_conexion_bd()
     if conexion is None:
         return None, None # Retorna None si no hay conexión
 
     try:
-        # Usamos cursor con dictionary=True para obtener resultados como diccionarios
-        cursor = conexion.cursor(dictionary=True)
+        cursor = conexion.cursor(dictionary=True) # Usamos dictionary=True para obtener resultados como diccionarios
         cursor.execute(query, params)
         nombres_columnas = [col[0] for col in cursor.description]
         datos_obtenidos = cursor.fetchall()
         cursor.close()
-        # No cerramos la conexión aquí porque está decorada con @st.cache_resource
         return datos_obtenidos, nombres_columnas # Retorna los datos como lista de diccionarios y los nombres de columna
     except mysql.connector.Error as e:
         st.error(f"Error al ejecutar la consulta: {e}")
+        # st.code(f"Consulta fallida: {query}\nParámetros: {params}") # ELIMINAR ESTA LÍNEA
         return None, None # Retorna None en caso de error SQL
     except Exception as e:
         st.error(f"Ocurrió un error inesperado al ejecutar la consulta: {e}")
+        # st.code(f"Consulta: {query}\nParámetros: {params}") # ELIMINAR ESTA LÍNEA
         return None, None # Retorna None en caso de error general
 
 st.set_page_config(layout="wide")
