@@ -2,4 +2,3 @@ streamlit
 pandas
 mysql-connector-python
 openpyxl
-
