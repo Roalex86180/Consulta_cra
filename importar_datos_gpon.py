@@ -103,7 +103,10 @@ def insert_gabinetes(connection, cursor, dataframe):
         print(f"Error inesperado al procesar Gabinetes: {e}")
 
 # --- Funciones de Inserción (las crearemos una por una) ---
-
+# Desde hoja 'Splitters' del Archivo V2
+# Esta función asume que la tabla Gabinete ya está populada (requiere id_gabinete para el FK)
+# --- Función para importar datos a la tabla Splitter_Gabinete_V2 (VERSION FINAL AJUSTADA) ---
+# Desde hoja 'Splitters' del Archivo V2
 # Esta función mapea SOLO las 18 columnas que realmente se encontraron en el DataFrame
 # Basado en la salida 'Columnas disponibles en DataFrame'
 def insert_splitter_gabinete_v2(connection, cursor, dataframe):
@@ -180,8 +183,6 @@ def insert_splitter_gabinete_v2(connection, cursor, dataframe):
     except Exception as e:
         connection.rollback()
         print(f"Error inesperado general al importar Splitters Gabinete (V2): {e}")
-
-
 # --- Función para importar datos a la tabla Doble_Conector ---
 def insert_doble_conectores(connection, cursor, dataframe):
     print("Iniciando importación de Doble Conectores...")
@@ -738,7 +739,13 @@ def insert_ctos(connection, cursor, dataframe, dc_lookup):
         lon, lat
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    
+    # 21 columnas, 21 placeholders %s
+    # Usamos ID_SMALLWORLD_CAJA del Excel para id_cto (PK)
+    # Usamos ID_SMALLWORLD_GABINETE del Excel para id_gabinete (FK)
+    # Usamos DIRECCION_CAJA del Excel para lookup id_dc (FK)
+    # Usamos NRO_DIRS_ASOCIADAS del Excel para cantidad_clientes
+    # Usamos INSERT IGNORE para saltar duplicados en la clave primaria (id_cto)
+
 
     rows_to_insert = []
     # Asegúrate de que los nombres de las columnas en el DataFrame (row['...'])

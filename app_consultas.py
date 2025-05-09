@@ -5,6 +5,8 @@ import pandas as pd
 import subprocess
 import sys
 
+import os
+st.set_page_config(layout="wide")
 
 # --- Función para Conectar a la Base de Datos ---
 # --- Función para Conectar a la Base de Datos (DIRECTO A CLOUD SQL) ---
@@ -69,7 +71,7 @@ def ejecutar_consulta(query, params=None):
         # st.code(f"Consulta: {query}\nParámetros: {params}") # ELIMINAR ESTA LÍNEA
         return None, None # Retorna None en caso de error general
 
-st.set_page_config(layout="wide")
+
 # --- Interfaz de Streamlit ---
 st.title("CRA UNIFICADO")
 
