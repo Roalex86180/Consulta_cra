@@ -2,11 +2,10 @@ import streamlit as st
 import mysql.connector
 import pandas as pd
 
-import subprocess
-import sys
 
-import os
+
 st.set_page_config(layout="wide")
+
 
 # --- Función para Conectar a la Base de Datos ---
 # --- Función para Conectar a la Base de Datos (DIRECTO A CLOUD SQL) ---
